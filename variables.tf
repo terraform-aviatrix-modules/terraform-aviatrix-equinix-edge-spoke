@@ -42,7 +42,7 @@ variable "customer_side_asn" {
   type        = number
 }
 
-variable "metro_code" {
+variable "equinix_metrocode" {
   description = "Equinix Metro code to deploy Aviatrix Edge."
   type        = string
 }
@@ -117,7 +117,7 @@ locals {
 
   lan_prefixlen = split("/", var.lan_interface_ip_prefix)[1]
 
-  site_id         = coalesce(var.site_id, "equinix-${var.metro_code}")
+  site_id         = coalesce(var.site_id, "equinix-${var.equinix_metrocode}")
   acl_name        = "${var.gw_name}-acl"
   acl_description = "ACL for ${var.gw_name}, primary and ha (if deployed.)"
 }

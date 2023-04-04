@@ -50,7 +50,7 @@ data "local_file" "this" {
 }
 
 data "equinix_network_account" "this" {
-  metro_code = var.metro_code
+  metro_code = var.equinix_metrocode
 }
 
 resource "equinix_network_file" "this" {

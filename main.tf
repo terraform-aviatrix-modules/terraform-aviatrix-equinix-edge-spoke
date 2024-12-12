@@ -1,98 +1,250 @@
-resource "random_integer" "wan_cidr" {
-  min = 0
-  max = 8191
-}
+resource "aviatrix_edge_equinix" "default" {
+  account_name = var.account
 
-resource "aviatrix_edge_spoke" "this" {
-  for_each = local.gateways
+  gw_name                = var.name
+  site_id                = var.site_id
+  ztp_file_download_path = "./"
 
-  # mandatory
-  gw_name                        = each.value["name"]
-  site_id                        = local.site_id
-  management_interface_config    = "Static"
-  management_interface_ip_prefix = "192.168.10.101/24" #This is placeholder and will be updated by cloud-init.
-  management_default_gateway_ip  = "192.168.10.254"    #This is placeholder and will be updated by cloud-init.
-  wan_interface_ip_prefix        = each.value["wan_ip_prefix"]
-  wan_default_gateway_ip         = local.wan_default
-  lan_interface_ip_prefix        = each.value["lan_ip_prefix"]
-  dns_server_ip                  = var.dns_server_ips[0]
-  secondary_dns_server_ip        = var.dns_server_ips[1]
-  ztp_file_type                  = "cloud-init"
-  ztp_file_download_path         = "."
-  local_as_number                = var.customer_side_asn
+  interfaces {
+    name          = "eth0"
+    type          = "WAN"
+    ip_address    = var.wan1_ip
+    gateway_ip    = var.wan1_gateway_ip
+    wan_public_ip = var.wan1_public_ip
+  }
 
-  # advanced options - optional
+  interfaces {
+    name       = "eth1"
+    type       = "LAN"
+    ip_address = var.lan_ip
+  }
 
-  #   prepend_as_path                  = var.prepend_as_path
-  #   enable_learned_cidrs_approval    = var.enable_learned_cidrs_approval
-  #   approved_learned_cidrs           = var.approved_learned_cidrs
-  #   spoke_bgp_manual_advertise_cidrs = var.spoke_bgp_manual_advertise_cidrs
-  #   enable_preserve_as_path          = var.enable_preserve_as_path
-  #   bgp_polling_time                 = var.bgp_polling_time
-  #   bgp_hold_time                    = var.bgp_hold_time
-  #   enable_edge_transitive_routing   = var.enable_edge_transitive_routing
-  #   enable_jumbo_frame               = var.enable_jumbo_frame
-  #   latitude                         = var.latitude
-  #   longitude                        = var.longitude
+  dynamic "interfaces" {
+    for_each = local.additional_wan_interfaces
+
+    content {
+      name       = interfaces.key
+      type       = "WAN"
+      ip_address = interfaces.value.ip
+      gateway_ip = interfaces.value.gateway
+    }
+  }
 
   lifecycle {
     ignore_changes = [
-      management_egress_ip_prefix,
-      management_default_gateway_ip
+      management_egress_ip_prefix_list,
+      interfaces
     ]
   }
 }
 
-data "local_file" "this" {
-  for_each = aviatrix_edge_spoke.this
+resource "aviatrix_edge_equinix_ha" "default" {
+  count                  = var.ha_gw ? 1 : 0
+  primary_gw_name        = aviatrix_edge_equinix.default.gw_name
+  ztp_file_download_path = "./"
 
-  filename = "./${each.value.gw_name}-${local.site_id}-cloud-init.txt"
+  interfaces {
+    name          = "eth0"
+    type          = "WAN"
+    ip_address    = var.ha_wan1_ip
+    gateway_ip    = var.ha_wan1_gateway_ip
+    wan_public_ip = var.ha_wan1_public_ip
+  }
+
+  interfaces {
+    name       = "eth1"
+    type       = "LAN"
+    ip_address = var.ha_lan_ip
+  }
+
+  dynamic "interfaces" {
+    for_each = local.hagw_additional_wan_interfaces
+
+    content {
+      name       = interfaces.key
+      type       = "WAN"
+      ip_address = interfaces.value.ip
+      gateway_ip = interfaces.value.gateway
+    }
+  }
+
+  lifecycle {
+    ignore_changes = [
+      management_egress_ip_prefix_list,
+      interfaces
+    ]
+  }
 }
 
-data "equinix_network_account" "this" {
-  metro_code = var.equinix_metrocode
+data "local_file" "cloud_init_content" {
+  filename = format("./%s-%s-cloud-init.txt", aviatrix_edge_equinix.default.id, aviatrix_edge_equinix.default.site_id)
+
+  depends_on = [aviatrix_edge_equinix.default]
 }
 
-resource "equinix_network_file" "this" {
-  for_each = data.local_file.this
+data "local_file" "hagw_cloud_init_content" {
+  count    = var.ha_gw ? 1 : 0
+  filename = format("./%s-cloud-init.txt", aviatrix_edge_equinix_ha.default[0].id)
 
-  metro_code       = data.equinix_network_account.this.metro_code
+  depends_on = [aviatrix_edge_equinix_ha.default]
+}
+
+resource "equinix_network_file" "default" {
+  metro_code       = var.equinix_metro_code
   byol             = true
   self_managed     = true
-  device_type_code = var.type_code
+  device_type_code = "AVIATRIX_EDGE"
   process_type     = "CLOUD_INIT"
-  file_name        = split("/", each.value.filename)[1]
-  content          = each.value.content
+  file_name        = data.local_file.cloud_init_content.filename
+  content          = data.local_file.cloud_init_content.content
 
   lifecycle {
     ignore_changes = all
   }
 }
 
-resource "equinix_network_device" "this" {
-  metro_code         = data.equinix_network_account.this.metro_code
-  account_number     = data.equinix_network_account.this.number
-  type_code          = var.type_code
+resource "equinix_network_file" "ha_gw" {
+  count            = var.ha_gw ? 1 : 0
+  metro_code       = var.equinix_metro_code
+  byol             = true
+  self_managed     = true
+  device_type_code = "AVIATRIX_EDGE"
+  process_type     = "CLOUD_INIT"
+  file_name        = data.local_file.hagw_cloud_init_content[0].filename
+  content          = data.local_file.hagw_cloud_init_content[0].content
+
+  lifecycle {
+    ignore_changes = all
+  }
+}
+
+resource "equinix_network_device" "default" {
+  metro_code         = var.equinix_metro_code
+  account_number     = var.equinix_account_id
+  type_code          = "AVIATRIX_EDGE_10"
   byol               = true
   self_managed       = true
   core_count         = var.core_count
-  package_code       = var.package_code
+  package_code       = "STD"
   version            = var.device_version
-  name               = local.gateways["primary"]["name"]
+  name               = aviatrix_edge_equinix.default.id
   notifications      = var.notifications
   term_length        = var.term_length
-  cloud_init_file_id = equinix_network_file.this["primary"].uuid
-  acl_template_id    = equinix_network_acl_template.this.id
+  cloud_init_file_id = equinix_network_file.default.uuid
+  acl_template_id    = equinix_network_acl_template.default.id
 
   dynamic "secondary_device" {
-    for_each = lookup(local.gateways, "secondary", null) != null ? [1] : []
+    for_each = var.ha_gw ? ["dummy"] : [] #Empty list (false) skips this section
     content {
-      name               = local.gateways["secondary"]["name"]
-      metro_code         = data.equinix_network_account.this.metro_code
-      account_number     = data.equinix_network_account.this.number
+      name               = aviatrix_edge_equinix_ha.default[0].id
+      metro_code         = var.equinix_metro_code
+      account_number     = var.equinix_account_id
       notifications      = var.notifications
-      cloud_init_file_id = equinix_network_file.this["secondary"].uuid
-      acl_template_id    = equinix_network_acl_template.this.id
+      cloud_init_file_id = equinix_network_file.ha_gw[0].uuid
+      acl_template_id    = equinix_network_acl_template.default.id
     }
+  }
+}
+
+data "aviatrix_caller_identity" "self" {}
+
+#Set mgmt egress CIDR
+resource "terracurl_request" "update_edge_gateway" {
+  name            = "update_edge_gateway"
+  method          = "POST"
+  url             = "https://${local.controller_ip}/v2/api"
+  skip_tls_verify = true
+  max_retry       = 3
+  retry_interval  = 3
+
+  headers = {
+    "Content-Type" = "application/json"
+  }
+
+  request_body = jsonencode({
+    action         = "update_edge_gateway"
+    CID            = data.aviatrix_caller_identity.self.cid
+    name           = aviatrix_edge_equinix.default.id
+    mgmt_egress_ip = local.management_prefix
+  })
+
+  response_codes = [200]
+
+  lifecycle {
+    ignore_changes = all
+  }
+}
+
+resource "terracurl_request" "update_ha_edge_gateway" {
+  count           = var.ha_gw ? 1 : 0
+  name            = "hagw_update_edge_gateway"
+  method          = "POST"
+  url             = "https://${local.controller_ip}/v2/api"
+  skip_tls_verify = true
+  max_retry       = 3
+  retry_interval  = 3
+
+  headers = {
+    "Content-Type" = "application/json"
+  }
+
+  request_body = jsonencode({
+    action         = "update_edge_gateway"
+    CID            = data.aviatrix_caller_identity.self.cid
+    name           = aviatrix_edge_equinix_ha.default[0].id
+    mgmt_egress_ip = local.hagw_management_prefix
+  })
+
+  response_codes = [200]
+
+  lifecycle {
+    ignore_changes = all
+  }
+}
+
+resource "equinix_network_acl_template" "default" {
+  name        = "Equinix-avx-acl"
+  description = "AVX Equinix ACL"
+  inbound_rule {
+    subnet      = format("%s/32", local.controller_ip)
+    protocol    = "TCP"
+    src_port    = "any"
+    dst_port    = "any"
+    description = "Controller IP"
+  }
+  inbound_rule {
+    subnet      = "8.8.8.8/32"
+    protocol    = "UDP"
+    src_port    = "any"
+    dst_port    = "any"
+    description = "DNS IP"
+  }
+  inbound_rule {
+    subnet      = "8.8.4.4/32"
+    protocol    = "UDP"
+    src_port    = "any"
+    dst_port    = "any"
+    description = "DNS IP 2"
+  }
+  inbound_rule {
+    subnet      = "169.254.0.0/30"
+    protocol    = "IP"
+    src_port    = "any"
+    dst_port    = "any"
+    description = "dx aws router"
+  }
+  inbound_rule {
+    subnet      = "10.254.200.0/30"
+    protocol    = "IP"
+    src_port    = "any"
+    dst_port    = "any"
+    description = "dx aws router"
+  }
+  inbound_rule {
+    subnet      = "10.0.0.0/8"
+    protocol    = "IP"
+    src_port    = "any"
+    dst_port    = "any"
+    description = "private network"
   }
 }

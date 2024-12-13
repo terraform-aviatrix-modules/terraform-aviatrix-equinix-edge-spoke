@@ -116,7 +116,7 @@ variable "equinix_account_id" {
 
 variable "device_version" {
   description = "Base image version for Aviatrix Edge."
-  default     = "7.1"
+  default     = "7.1.d"
   type        = string
 }
 

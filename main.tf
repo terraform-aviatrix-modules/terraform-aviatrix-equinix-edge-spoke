@@ -1,9 +1,11 @@
 resource "aviatrix_edge_equinix" "default" {
   account_name = var.account
 
-  gw_name                = var.name
-  site_id                = var.site_id
-  ztp_file_download_path = "./"
+  gw_name                 = var.name
+  site_id                 = var.site_id
+  ztp_file_download_path  = "./"
+  dns_server_ip           = var.dns_server_ips[0]
+  secondary_dns_server_ip = var.dns_server_ips[1]
 
   interfaces {
     name          = "eth0"
@@ -212,15 +214,16 @@ resource "equinix_network_acl_template" "default" {
     dst_port    = "any"
     description = "Controller IP"
   }
+
   inbound_rule {
-    subnet      = "8.8.8.8/32"
+    subnet      = format("%s/32", var.dns_server_ips[0])
     protocol    = "UDP"
     src_port    = "any"
     dst_port    = "any"
     description = "DNS IP"
   }
   inbound_rule {
-    subnet      = "8.8.4.4/32"
+    subnet      = format("%s/32", var.dns_server_ips[1])
     protocol    = "UDP"
     src_port    = "any"
     dst_port    = "any"

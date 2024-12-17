@@ -7,7 +7,7 @@ This module deploys the Aviatrix Edge Gateway in a Megaport location. It can tak
 ### Compatibility
 Module | Terraform | Controller | Aviatrix Terraform provider | Megaport  Terraform provider
 :--- | :--- | :--- | :--- | :---
-v1.1.1 | >=1.3 | 7.2 | ~> 3.2.0 | >= 1.2.1
+v1.0.0 | >=1.3 | >= 7.1 | >= 3.1.0 | >= 1.2.1
 
 ### Usage Example
 ```hcl
@@ -20,7 +20,7 @@ v1.1.1 | >=1.3 | 7.2 | ~> 3.2.0 | >= 1.2.1
 | <a name="input_account"></a> [account](#input\_account) | Megaport account on the Aviatrix controller. | `string` | n/a | yes |
 | <a name="input_approved_learned_cidrs"></a> [approved\_learned\_cidrs](#input\_approved\_learned\_cidrs) | Set of approved learned CIDRs. Valid only when enable\_learned\_cidrs\_approval is set to true. Example: ["10.1.0.0/16", "10.2.0.0/16"]. | `list(string)` | `null` | no |
 | <a name="input_core_count"></a> [core\_count](#input\_core\_count) | Number of cores to assign to the Aviatrix Edge VM(s). | `number` | `2` | no |
-| <a name="input_device_version"></a> [device\_version](#input\_device\_version) | Base image version for Aviatrix Edge. | `string` | `"7.1"` | no |
+| <a name="input_device_version"></a> [device\_version](#input\_device\_version) | Base image version for Aviatrix Edge. | `string` | `"7.1.d"` | no |
 | <a name="input_dns_server_ips"></a> [dns\_server\_ips](#input\_dns\_server\_ips) | List of exactly 2 DNS server IPs. Default: 8.8.8.8, 1.1.1.1 | `list(string)` | <pre>[<br/>  "8.8.8.8",<br/>  "1.1.1.1"<br/>]</pre> | no |
 | <a name="input_enable_learned_cidrs_approval"></a> [enable\_learned\_cidrs\_approval](#input\_enable\_learned\_cidrs\_approval) | Switch to enable learned CIDR approval. | `bool` | `null` | no |
 | <a name="input_equinix_account_id"></a> [equinix\_account\_id](#input\_equinix\_account\_id) | ID of the Equinix account | `string` | n/a | yes |
@@ -46,4 +46,6 @@ v1.1.1 | >=1.3 | 7.2 | ~> 3.2.0 | >= 1.2.1
 | Name | Description |
 |------|-------------|
 | <a name="output_equinix_network_device"></a> [equinix\_network\_device](#output\_equinix\_network\_device) | n/a |
+| <a name="output_ha_management_ip"></a> [ha\_management\_ip](#output\_ha\_management\_ip) | n/a |
+| <a name="output_management_ip"></a> [management\_ip](#output\_management\_ip) | n/a |
 <!-- END_TF_DOCS -->

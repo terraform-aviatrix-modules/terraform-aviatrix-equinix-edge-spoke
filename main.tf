@@ -146,6 +146,12 @@ resource "equinix_network_device" "default" {
       acl_template_id    = equinix_network_acl_template.default.id
     }
   }
+
+  lifecycle {
+    ignore_changes = [
+      generate_default_password,
+    ]
+  }
 }
 
 data "aviatrix_caller_identity" "self" {}

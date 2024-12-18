@@ -1,6 +1,11 @@
 variable "name" {
   description = "Name for the Equinix Gateway."
   type        = string
+
+  validation {
+    condition     = can(regex("^[a-zA-Z][a-zA-Z0-9-]*$", var.name))
+    error_message = "The name must start with a letter and contain only letters, numbers, and dashes (no special characters)."
+  }
 }
 
 variable "account" {

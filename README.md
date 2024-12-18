@@ -45,6 +45,8 @@ v1.0.0 | >=1.3 | >= 7.1 | >= 3.1.0 | >= 1.2.1
 
 | Name | Description |
 |------|-------------|
+| <a name="output_aviatrix_edge_equinix"></a> [aviatrix\_edge\_equinix](#output\_aviatrix\_edge\_equinix) | n/a |
+| <a name="output_aviatrix_edge_equinix_ha"></a> [aviatrix\_edge\_equinix\_ha](#output\_aviatrix\_edge\_equinix\_ha) | n/a |
 | <a name="output_equinix_network_device"></a> [equinix\_network\_device](#output\_equinix\_network\_device) | n/a |
 | <a name="output_ha_management_ip"></a> [ha\_management\_ip](#output\_ha\_management\_ip) | n/a |
 | <a name="output_management_ip"></a> [management\_ip](#output\_management\_ip) | n/a |

@@ -1,10 +1,10 @@
 variable "name" {
-  description = "Name for the Megaport Gateway."
+  description = "Name for the Equinix Gateway."
   type        = string
 }
 
 variable "account" {
-  description = "Megaport account on the Aviatrix controller."
+  description = "Equinix account on the Aviatrix controller."
   type        = string
 }
 
@@ -87,7 +87,7 @@ variable "ha_wan1_public_ip" {
 }
 
 variable "ha_gw" {
-  description = "Enables creation of a second Megaport gateway."
+  description = "Enables creation of a second Equinix gateway."
   default     = false
   type        = bool
   nullable    = false
